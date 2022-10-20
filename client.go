@@ -77,6 +77,38 @@ func (c *Client) Subscribe(stream string, handler func(msg *Event) error) error 
 }
 
 // SubscribeWithContext to a data stream with context
+func (c *Client) SubscribeWithContext2(ctx context.Context, stream string, handler func(msg *Event) error) error {
+	resp, err := c.request(ctx, stream)
+	if err != nil {
+		return err
+	}
+	if validator := c.ResponseValidator; validator != nil {
+		err = validator(c, resp)
+		if err != nil {
+			return err
+		}
+	} else if resp.StatusCode != 200 {
+		resp.Body.Close()
+		return fmt.Errorf("could not connect to stream: %s", http.StatusText(resp.StatusCode))
+	}
+	defer resp.Body.Close()
+
+	reader := NewEventStreamReader(resp.Body, c.maxBufferSize)
+	eventChan, errorChan := c.startReadLoop(reader)
+
+	for {
+		select {
+		case err := <-errorChan:
+			return err
+		case msg := <-eventChan:
+			return handler(msg)
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+}
+
+// SubscribeWithContext to a data stream with context
 func (c *Client) SubscribeWithContext(ctx context.Context, stream string, handler func(msg *Event) error) error {
 	operation := func() error {
 		resp, err := c.request(ctx, stream)
