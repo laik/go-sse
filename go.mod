@@ -1,4 +1,4 @@
-module github.com/laik/sse
+module github.com/laik/go-sse
 
 go 1.19
 
