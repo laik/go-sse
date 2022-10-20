@@ -101,7 +101,9 @@ func (c *Client) SubscribeWithContext2(ctx context.Context, stream string, handl
 		case err := <-errorChan:
 			return err
 		case msg := <-eventChan:
-			return handler(msg)
+			if err := handler(msg); err != nil {
+				return err
+			}
 		case <-ctx.Done():
 			return ctx.Err()
 		}
@@ -134,7 +136,9 @@ func (c *Client) SubscribeWithContext(ctx context.Context, stream string, handle
 			case err := <-errorChan:
 				return err
 			case msg := <-eventChan:
-				return handler(msg)
+				if err := handler(msg); err != nil {
+					return err
+				}
 			case <-ctx.Done():
 				return ctx.Err()
 			}
